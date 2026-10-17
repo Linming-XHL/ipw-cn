@@ -16,7 +16,6 @@ const allowedDomains = extractDomains(config);
 const ipProbeOrigins = [
   config.DualStackAPI,
   config.v4OnlyAPI,
-  config.v6OnlyAPI,
 ].map((url) => new URL(url).origin);
 // 中间件（工具页 /middleware/* 的上游）：只在部分页面用到，DNS 预解析即可，不占连接。
 const middlewareOrigin = config.Middleware?.[0]

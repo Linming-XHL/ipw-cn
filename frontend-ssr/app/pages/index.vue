@@ -44,7 +44,10 @@ useHead({
         `    };`,
         `  }`,
         // 与 onMounted 的语义一致：三接口各自独立、失败静默（保持「查询中」占位）
-        `  fetch(${JSON.stringify(config.v6OnlyAPI)}).then(function (r) { return r.text(); }).then(emit('v6')).catch(function () {});`,
+        // IPv6 探测走双栈端点并校验返回值是 IPv6 才认（6.wsmdn.top 的 DNS AAAA 是
+        // IPv4-mapped，永远返回 IPv4；test.wsmdn.top 返回真 IPv6）。此刻 is-ip 还没加载，
+        // 用正则等价判断：含冒号不含点号。
+        `  fetch(${JSON.stringify(config.DualStackAPI)}).then(function (r) { return r.text(); }).then(function (text) { if (/^[0-9a-fA-F:]+$/.test(text)) emit('v6')(text); else emit('v6')(''); }).catch(function () {});`,
         `  fetch(${JSON.stringify(config.v4OnlyAPI)}).then(function (r) { return r.text(); }).then(emit('v4')).catch(function () {});`,
         `  fetch(${JSON.stringify(config.DualStackAPI)}).then(function (r) { return r.text(); }).then(emit('dual')).catch(function () {});`,
         '})();',
@@ -179,9 +182,10 @@ onMounted(() => {
       .catch(() => {});
   }
   if (!consumeProbe('v6', (ip) => { yourIPv6.value = ip; })) {
-    $fetch<string>(config.v6OnlyAPI, ipFetchOptions)
+    // 兜底也走双栈端点 + IPv6 校验（与内联脚本一致，理由见 useHead 注释）
+    $fetch<string>(config.DualStackAPI, ipFetchOptions)
       .then((ip) => {
-        yourIPv6.value = ip;
+        yourIPv6.value = isIPv6(ip) ? ip : '';
       })
       .catch(() => {});
   }
